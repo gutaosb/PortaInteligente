@@ -98,17 +98,65 @@ def listar_professor_por_nome(nome):
     return professor
 
 # ============================================================
-#  FUNÇÕES DO CRUD DE AULAS
+#  FUNÇÕES DO CRUD DE SALAS
 # ============================================================
 
-def inserir_aula(professor_id, dia_semana, hora_inicio, hora_fim, sala):
+def listar_salas():
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM salas")
+    salas = cursor.fetchall()
+
+    conn.close()
+
+    salas_lista=[]
+    for s in salas:
+        salas_lista.append(s[1])
+
+    return salas_lista
+
+
+def listar_sala_por_nome(sala_nome):
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM salas WHERE nome LIKE ?", (sala_nome,))
+    sala = cursor.fetchone()
+
+    conn.close()
+
+    return sala
+
+
+
+def inserir_sala(nome):
     conn = conectar()
     cursor = conn.cursor()
 
     cursor.execute("""
-        INSERT INTO aulas (professor_id, dia_semana, hora_inicio, hora_fim, sala)
+        INSERT INTO salas (nome)
+        VALUES(?)
+    """, (nome,))
+
+    conn.commit()
+    conn.close()
+
+    print(f"Sala {nome} cadastrada com sucesso!")
+
+
+# ============================================================
+#  FUNÇÕES DO CRUD DE AULAS
+# ============================================================
+
+def inserir_aula(professor_id, sala_id, dia_semana, hora_inicio, hora_fim):
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO aulas (professor_id, sala_id, dia_semana, hora_inicio, hora_fim)
         VALUES (?, ?, ?, ?, ?)
-    """, (professor_id, dia_semana, hora_inicio, hora_fim, sala))
+    """, (professor_id, sala_id, dia_semana, hora_inicio, hora_fim))
 
     conn.commit()
     conn.close()
@@ -119,9 +167,10 @@ def listar_aulas():
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT a.id, p.nome, a.dia_semana, a.hora_inicio, a.hora_fim, a.sala
+        SELECT a.id, p.nome, s.nome, a.dia_semana, a.hora_inicio, a.hora_fim, a.sala
         FROM aulas a
         JOIN professores p ON a.professor_id = p.id
+        JOIN salas s ON a.sala_id = s.id
     """)
     aulas = cursor.fetchall()
 
@@ -133,10 +182,11 @@ def listar_aula_professor(professor_id):
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT dia_semana, hora_inicio, hora_fim, sala
-        FROM aulas
-        WHERE professor_id = ?
-    """, (professor_id,))
+    SELECT a.dia_semana, a.hora_inicio, a.hora_fim, s.nome
+    FROM aulas a
+    JOIN salas s ON a.sala_id = s.id
+    WHERE a.professor_id = ?
+""", (professor_id,))
     aulas = cursor.fetchall()
 
     conn.close()
@@ -158,7 +208,7 @@ def deletar_aula(aula_id):
 #  FUNÇÕES DO CRUD DE ACESSOS
 # ============================================================
 
-def registrar_acesso(professor_id, resultado):
+def registrar_acesso(professor_id, sala_id, resultado):
     """
     Registra tentativa de acesso na tabela acessos.
     resultado: "Permitido" ou "Negado"
@@ -167,8 +217,8 @@ def registrar_acesso(professor_id, resultado):
     cur = conn.cursor()
     now = datetime.now().isoformat(sep=' ', timespec='seconds')
     cur.execute("""
-        INSERT INTO acessos (professor_id, data_hora, resultado)
-        VALUES (?, ?, ?)
-    """, (professor_id, now, resultado))
+        INSERT INTO acessos (professor_id, sala_id, data_hora, resultado)
+        VALUES (?, ?, ?, ?)
+    """, (professor_id, sala_id, now, resultado))
     conn.commit()
     conn.close()

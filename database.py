@@ -24,14 +24,22 @@ def criar_tabelas():
     """)
 
     cursor.execute("""
+        CREATE TABLE IF NOT EXISTS salas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL
+        )
+    """)
+
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS aulas (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             professor_id INTEGER NOT NULL,
+            sala_id INTEGER NOT NULL,
             dia_semana TEXT NOT NULL,
             hora_inicio TEXT NOT NULL,
             hora_fim TEXT NOT NULL,
-            sala TEXT,
-            FOREIGN KEY (professor_id) REFERENCES professores (id)
+            FOREIGN KEY (professor_id) REFERENCES professores (id),
+            FOREIGN KEY (sala_id) REFERENCES salas (id)
         )
     """)
 
@@ -40,9 +48,11 @@ def criar_tabelas():
         CREATE TABLE IF NOT EXISTS acessos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             professor_id INTEGER,
+            sala_id INTEGER, 
             data_hora TEXT,
             resultado TEXT,
-            FOREIGN KEY (professor_id) REFERENCES professores (id)
+            FOREIGN KEY (professor_id) REFERENCES professores (id),
+            FOREIGN KEY (sala_id) REFERENCES salas (id)
         )
     """)
 

@@ -146,21 +146,45 @@ def iniciar_reconhecimento(sala_selecionada=None, mostrar_janela=True):
                 roi = gray[y:y+h, x:x+w]
                 roi = cv2.resize(roi, FACE_IMG_SIZE)
 
-                # Aqui não usamos mais confiança, apenas reconhecemos o rosto
                 label, _ = recognizer.predict(roi)
                 nome_professor = label_to_name.get(label, "Desconhecido")
+
+                # Busca o professor no banco
+                professor = listar_professor_por_nome(nome_professor)
+                if not professor:
+                    print(f"[ERRO] Professor '{nome_professor}' não encontrado no banco.")
+                    continue
+
+                professor_id = professor[0]
+
+                # Busca o ID da sala selecionada
+                sala_id = None
+                if sala_selecionada:
+                    conn = conectar()
+                    cur = conn.cursor()
+                    cur.execute("SELECT id FROM salas WHERE nome = ?", (sala_selecionada,))
+                    sala = cur.fetchone()
+                    conn.close()
+                    if sala:
+                        sala_id = sala[0]
 
                 # Verifica aula do professor
                 tem_aula, aula_info = professor_tem_aula_no_horario(nome_professor, sala_selecionada)
                 if tem_aula:
-                    registrar_acesso(nome_professor, "Permitido")
-                    resultado_final = {'status': 'Permitido', 'professor': nome_professor,
-                                       'mensagem': f'✅ {nome_professor} reconhecido. Aula confirmada.'}
+                    registrar_acesso(professor_id, sala_id, "Permitido")
+                    resultado_final = {
+                        'status': 'Permitido',
+                        'professor': nome_professor,
+                        'mensagem': f'✅ {nome_professor} reconhecido. Aula confirmada.'
+                    }
                     color = (0, 255, 0)
                 else:
-                    registrar_acesso(nome_professor, "Negado")
-                    resultado_final = {'status': 'Negado', 'professor': nome_professor,
-                                       'mensagem': f'⚠️ {nome_professor} reconhecido, mas sem aula agora.'}
+                    registrar_acesso(professor_id, sala_id, "Negado")
+                    resultado_final = {
+                        'status': 'Negado',
+                        'professor': nome_professor,
+                        'mensagem': f'⚠️ {nome_professor} reconhecido, mas sem aula agora.'
+                    }
                     color = (0, 128, 255)
 
                 cv2.rectangle(frame, (x, y), (x+w, y+h), color, 2)
@@ -182,5 +206,6 @@ def iniciar_reconhecimento(sala_selecionada=None, mostrar_janela=True):
     finally:
         cam.release()
         cv2.destroyAllWindows()
+        print(sala_id)
 
     return resultado_final
